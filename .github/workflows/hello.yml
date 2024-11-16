@@ -1,0 +1,45 @@
+name: Build Hello World Program
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget build-essential
+
+    - name: Make the install script executable
+      run: chmod +x install-musl
+
+    - name: Install musl libc
+      run: ./install-musl --prefix /usr/local/musl
+
+    - name: Compile the Hello World program
+      run: |
+        /usr/local/musl/bin/musl-gcc --static -o hello test/hello.c
+
+    - name: Check executable type
+      run: |
+        file hello
+        if file hello | grep -q "dynamically linked"; then
+            echo "Error: 'hello' is a dynamically linked executable."
+            exit 1
+        else
+            echo "'hello' is a statically linked executable."
+        fi
+
+    - name: Run the Hello World program
+      run: ./hello
