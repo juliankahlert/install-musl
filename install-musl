@@ -1,0 +1,92 @@
+#!/bin/sh
+
+# install-musl - Script for installing musl libc from source
+#
+# Copyright (c) 2024 Julian Kahlert
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+# modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+#     1. The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#     2. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+#        WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+#        COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+#        ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+# Note: The file extension has been omitted by choice to facilitate the potential replacement of this script
+#       with a program written in another programming language without breaking any scripts that depend on it.
+
+# Fail on any error
+set -e
+
+# Defaults
+INSTALL_PREFIX="/usr/local/musl"
+MUSL_VERSION=1.2.2
+
+while test "$#" -gt 0
+do
+	case "$1" in
+	--prefix)
+		INSTALL_PREFIX="$2"
+		shift 2
+		;;
+	*)
+		echo "Unknown parameter: $1"
+		exit 1
+		;;
+	esac
+done
+
+extract_version()
+{
+	major=$(grep 'major:' musl.yaml | sed 's/.*: //; s/ //g')
+	minor=$(grep 'minor:' musl.yaml | sed 's/.*: //; s/ //g')
+	patch=$(grep 'patch:' musl.yaml | sed 's/.*: //; s/ //g')
+
+	echo "$major.$minor.$patch"
+}
+
+download_musl()
+{
+	echo "Downloading musl libc version $MUSL_VERSION"
+	wget https://musl.libc.org/releases/musl-$MUSL_VERSION.tar.gz
+	tar -xzf musl-$MUSL_VERSION.tar.gz
+}
+
+build_musl()
+{
+	pushd musl-$MUSL_VERSION
+	./configure --prefix="$INSTALL_PREFIX" --enable-static
+	make
+	popd
+}
+
+install_musl()
+{
+	pushd musl-$MUSL_VERSION
+	sudo make install
+	popd
+}
+
+cleanup()
+{
+	rm -rf musl-$MUSL_VERSION musl-$MUSL_VERSION.tar.gz
+}
+
+if ! test -f musl.yaml
+then
+	echo "Warning: musl.yaml file not found! Using musl $MUSL_VERSION"
+else
+	MUSL_VERSION=$(extract_version)
+fi
+
+echo "Installing musl libc version $MUSL_VERSION to $INSTALL_PREFIX..."
+
+download_musl
+build_musl
+install_musl
+cleanup
+
+echo "musl libc version $MUSL_VERSION installed successfully to $INSTALL_PREFIX."
