@@ -39,6 +39,28 @@ do
 	esac
 done
 
+# Emulate pushd and popd as many systems dont have them installed
+DIR_STACK=""
+pushd()
+{
+	DIR_STACK="$PWD;$DIR_STACK"
+	cd "$1" || return
+}
+
+popd()
+{
+	if test -z "$DIR_STACK"
+	then
+		echo "Error: Directory stack is empty. Cannot pop."
+		return 1
+	fi
+
+	last_dir="${DIR_STACK%%;*}"
+	DIR_STACK="${DIR_STACK#*;}"
+
+	cd "$last_dir" || return
+}
+
 extract_version()
 {
 	major=$(grep 'major:' musl.yaml | sed 's/.*: //; s/ //g')
